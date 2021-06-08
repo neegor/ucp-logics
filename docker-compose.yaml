@@ -1,0 +1,37 @@
+version: "3.4"
+services:
+  ucp-postgres:
+    image: postgres:12-alpine
+    container_name: ucp-postgres
+    restart: always
+    volumes:
+      - ucp-postgres-data:/var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ucp
+      POSTGRES_USER: metrauser
+      POSTGRES_PASSWORD: metrapsw
+  ucp-core:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: ucp-core
+    environment:
+      WAIT_HOSTS: ucp-postgres:5432
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/home/app/ucp-core
+    ports:
+      - 8000:8000
+    tty: true
+    restart: on-failure
+    depends_on:
+      - ucp-postgres 
+volumes:
+  ucp-postgres-data:
+networks:
+  default:
+    external:
+      name: ucp-network
