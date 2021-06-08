@@ -1,4 +1,6 @@
-version: "3.4"
+---
+
+version: "3.9"
 services:
   ucp-postgres:
     image: postgres:12-alpine
@@ -11,8 +13,8 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_DB: ucp
-      POSTGRES_USER: metrauser
-      POSTGRES_PASSWORD: metrapsw
+      POSTGRES_USER: ucpuser
+      POSTGRES_PASSWORD: ucppsw
   ucp-core:
     build:
       context: .
