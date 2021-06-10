@@ -15,6 +15,20 @@ services:
       POSTGRES_DB: ucp
       POSTGRES_USER: ucpuser
       POSTGRES_PASSWORD: ucppsw
+  ucp-rabbitmq:
+    image: rabbitmq:3.8-alpine
+    container_name: ucp-rabbitmq
+    environment:
+      RABBITMQ_ERLANG_COOKIE: SWQOKODSQALRPCLNMEQG
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq
+    ports:
+      - 15672:15672
+      - 5672:5672
+    volumes:
+      - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
   ucp-core:
     build:
       context: .
