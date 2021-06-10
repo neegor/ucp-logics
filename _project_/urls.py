@@ -16,6 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+
+from customers.views import IndexView, QueueView
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path('', IndexView.as_view(), name='index_view'),
+    path('queue/', QueueView.as_view(), name='queue_view'),
+
 ]
