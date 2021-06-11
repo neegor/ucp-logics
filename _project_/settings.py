@@ -130,3 +130,34 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# RabbitMQ settings
+
+RABBITMQ = {
+    'default': {
+        'HOST': 'ucp-rabbitmq',
+        'PORT': 5672,
+        'VIRTUAL_HOST': '/',
+        'USER': 'rabbitmq',
+        'PASSWORD': 'rabbitmq',
+     }
+}
+
+# Очередь для работы с индексом (добавление/удаление пользователей)
+INDEX_QUEUE_NAME = "index"
+# Очередь для работы с выполнением задач (добавление задач на чтение из БД)
+PERFORM_QUEUE_NAME = "perform"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+}

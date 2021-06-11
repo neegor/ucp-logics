@@ -1,5 +1,7 @@
+import json
 import time
 
+from django.conf import settings
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import FormView
@@ -7,6 +9,10 @@ from model_mommy import mommy
 
 from customers.forms import AddCustomersForm, AddQueueTasksForm
 from customers.models import Customer
+from customers.mq_helper import RabbitMQPublisher
+
+
+mq_publisher = RabbitMQPublisher()
 
 
 class IndexView(FormView):
@@ -34,7 +40,17 @@ class IndexView(FormView):
         quantity = form.cleaned_data['quantity']
 
         if '_add' in self.request.POST:
-            # TODO: вызов таска на добавление пользователей
+            # Вызов таска на добавление пользователей
+            mq_publisher.get_channel().basic_publish(
+                exchange='',
+                routing_key=settings.INDEX_QUEUE_NAME,
+                body=json.dumps(
+                    {
+                        'type': 'add',
+                        'qty': quantity,
+                    }
+                )
+            )
 
             messages.add_message(
                 self.request,
@@ -42,7 +58,17 @@ class IndexView(FormView):
                 f"Будет создано {quantity} новых пользователей."
             )
         elif '_delete' in self.request.POST:
-            # TODO: вызов таска на удаление пользователей
+            # Вызов таска на удаление пользователей
+            mq_publisher.get_channel().basic_publish(
+                exchange='',
+                routing_key=settings.INDEX_QUEUE_NAME,
+                body=json.dumps(
+                    {
+                        'type': 'delete',
+                        'qty': quantity,
+                    }
+                )
+            )
 
             messages.add_message(
                 self.request,
@@ -70,8 +96,8 @@ class QueueView(FormView):
 
     def get_context_data(self, **kwargs):
 
-        # TODO: Получить число тасков в очереди/топике
-        # kwargs['queue_tasks_count'] =
+        # Получает число тасков в очереди/топике
+        kwargs['queue_tasks_count'] = mq_publisher.get_queue_size(settings.PERFORM_QUEUE_NAME)
         return kwargs
 
     def form_valid(self, form):
@@ -83,12 +109,24 @@ class QueueView(FormView):
         quantity = form.cleaned_data['quantity']
 
         if '_add' in self.request.POST:
-            # TODO: вызов таска на добавление тасков в очередь
+
+            # Вызов таска на добавление тасков в очередь обработки
+            for customer_id in Customer.objects.order_by('?').values_list('pk', flat=True)[:quantity]:
+                mq_publisher.get_channel().basic_publish(
+                    exchange='',
+                    routing_key=settings.PERFORM_QUEUE_NAME,
+                    body=json.dumps(
+                        {
+                            'type': 'perform',
+                            'id': customer_id,
+                        }
+                    )
+                )
 
             messages.add_message(
                 self.request,
                 messages.SUCCESS,
-                f"Будет создано {quantity} новых задач."
+                f"{quantity} новых задач было добавлено в очередь."
             )
         else:
             messages.add_message(
@@ -97,57 +135,3 @@ class QueueView(FormView):
                 f"Некорректный запрос."
             )
         return super().form_valid(form)
-
-
-def add_customers(qty=1000):
-    """Добавляет новых пользователей в БД.
-
-    Args:
-        qty: количество пользователей к добавлению
-
-    Added 1000000 customers in 188.868 seconds. (chunk_size=5000)
-    Added 1000000 customers in 190.461 seconds. (chunk_size=1000)
-    Added 1000000 customers in 204.128 seconds. (chunk_size=10000)
-
-    Added 1000000 customers in 203.972 seconds. (chunk_size=5000)
-    Added 1000000 customers in 203.666 seconds. (chunk_size=5000)
-    Added 1000000 customers in 206.289 seconds. (chunk_size=5000)
-
-    15.000 апдейтов
-    15.000.000 рассылок
-
-    """
-
-    chunk_size = 5000
-
-    ctr = 0
-
-    chunks_qty = int(qty/chunk_size)
-    remains = qty
-
-    start_time = time.time()
-
-    for i in range(chunks_qty):
-        if i < (chunks_qty - 1):
-            # full chunk
-
-            objects = mommy.prepare(Customer, _quantity=chunk_size, _fill_optional=True)
-            remains -= chunk_size
-            ctr += chunk_size
-        else:
-            # the rest
-            objects = mommy.prepare(Customer, _quantity=remains, _fill_optional=True)
-            ctr += chunk_size
-
-        Customer.objects.bulk_create(objects)
-        print(f"Added {ctr} of {qty} customers so far...")
-
-    print(f"Added {qty} customers in {(time.time() - start_time):.3f} seconds. (chunk_size={chunk_size})")
-
-
-def clean_customers():
-    """
-
-    Returns:
-    """
-    print(Customer.objects.all().delete())

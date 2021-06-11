@@ -3,5 +3,9 @@ Django==3.2.4
 psycopg2-binary==2.8.6
 requests==2.25.1
 
+# RabbitMQ
+pika==1.2.0
+
+# Misc
 model-mommy==2.0.0
 django-cacheops==6.0
